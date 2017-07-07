@@ -1,0 +1,341 @@
+#include <avr/io.h>
+#include <util/delay.h>
+#include <string.h>
+#include <avr/interrupt.h>
+
+
+
+
+volatile unsigned char Genimg_ack[12]={0xEF,0X01,0xFF,0xFF,0xFF,0xFF,0x07,0x00,0x03,0X00,0x00,0X0A};
+volatile unsigned int val[12]={0};
+
+
+volatile unsigned int i=0,j=0,g=0;
+
+void uartinit(void)
+{
+	UBRR0L=0x0C;
+	UCSR0B |= (1 << RXEN0 ) | (1 << TXEN0 )| (1<<RXCIE0);
+
+}
+
+
+uart_trans(char tx_data)
+{
+	while (( UCSR0A & (1 << UDRE0 )) == 0);
+	UDR0 = tx_data ;
+	
+}
+
+void stransmit0(char *p)
+{
+	while(*p) uart_trans(*p++);
+}
+
+ISR(USART0_RX_vect)
+{
+	unsigned int temp;
+	temp = UDR0 ;
+	val[g]=temp;
+	g++;
+	if(g>11)
+	{
+		g=0;
+	}
+}
+
+lcdinit()
+{
+	cmd(0x38);
+	cmd(0x0C);
+	cmd(0x01);
+	cmd(0x80);
+	
+	_delay_ms(1000);
+}
+
+uint8_t get_adc(unsigned char ch)
+{
+	ADMUX=0x60|ch;
+	ADCSRA=0xC5;
+	while(!ADIF);
+	_delay_ms(10);
+	return(ADCH);
+}
+
+void cmd(unsigned char c)
+{
+	PORTC=c;
+	PORTD=0x20;
+	_delay_ms(1);
+	PORTD=0x00;
+}
+
+void data(unsigned	char c)
+{
+	PORTC=c;
+	_delay_ms(1);
+	PORTD=0xA0;
+	_delay_ms(1);
+	PORTD=0x80;
+	_delay_ms(1);
+	cmd(0x06);
+}
+
+void string(char *p)
+{
+	while(*p) data(*p++);
+	
+}
+
+unsigned char get_touch()
+{
+        unsigned char x_touch,y_touch;
+		DDRA|= 0B01010000;
+		DDRA&=~0b10100000;
+		PORTA|=0B00010000;
+		PORTA&=~0b01000000;
+		_delay_ms(10);
+
+		x_touch=get_adc(0x05);
+		_delay_ms(100);
+
+		DDRA|=0B10100000;
+		DDRA&=~0b01010000;
+		PORTA|= 0B10000000;
+		PORTA&=~0b00100000;
+		_delay_ms(10);
+		y_touch=get_adc(0x04);
+		_delay_ms(100);
+
+		/*stransmit0("\r\nX:");
+		cmd(0X80);
+		string("X:");
+		transmit0((x/100)+48);
+		data((x/100)+48);
+		x=x%100;
+		transmit0((x/10)+48);
+		data((x/10)+48);
+		x=x%10;
+		transmit0(x+48);
+		data(x+48);
+		stransmit0(", Y:");
+		string(", Y:");
+		transmit0((y/100)+48);
+		data((y/100)+48);
+		y=y%100;
+		transmit0((y/10)+48);
+		data((y/10)+48);
+		y=y%10;
+		transmit0(y+48);
+		data(y+48);
+		_delay_ms(10);*/
+		if ((x_touch>=20) && (x_touch<70))
+		{
+			if ((y_touch>173)&&(y_touch<=225))
+			{
+				//lcd_char('*');
+				 string( "*");
+				return('1');
+			}
+			if ((y_touch>109)&&(y_touch<170))
+			{
+				//lcd_char('#');
+				 string( "*");
+				 return('2');
+			}
+			else if ((y_touch>=48)&&(y_touch<100))
+			{
+				//lcd_char(',');
+				 string( "*");
+				 return('3');
+			}
+			
+		}
+		
+		else if ((x_touch>=70) && (x_touch<120))
+		{
+			if ((y_touch>=170)&&(y_touch<225))
+			{
+				//lcd_char('*');
+				string( "*");
+				return('4');
+			}
+			if ((y_touch>=110)&&(y_touch<170))
+			{
+				//lcd_char('#');
+				string( "*");
+				return('5');
+			}
+			else if ((y_touch>=40)&&(y_touch<=100))
+			{
+				//lcd_char(',');
+				string( "*");
+				return('6');
+			}
+			
+		}
+		
+		else if ((x_touch>=130) && (x_touch<180))
+		{
+			if ((y_touch>170)&&(y_touch<=225))
+			{
+				//lcd_char('*');
+				string( "*");
+				return('7');
+			}
+			if ((y_touch>=110)&&(y_touch<170))
+			{
+				//lcd_char('#');
+				string( "*");
+				return('8');
+			}
+			if ((y_touch>=40)&&(y_touch<100))
+			{
+				//lcd_char('#');
+				string( "*");
+				return('9');
+			}
+			
+		}
+		
+		else if ((x_touch>=180) && (x_touch<255))
+		{
+			if ((y_touch>170)&&(y_touch<=225))
+			{
+				//lcd_char('*');
+				cmd(0x01);
+				cmd(0x80);
+				string("Enter Password :");
+				cmd(0xC0);
+				i=0;
+			}
+			if ((y_touch>=110)&&(y_touch<170))
+			{
+				//lcd_char('#');
+				string( "*");
+				return('0');
+			}
+			if ((y_touch>=40)&&(y_touch<100))
+			{
+				//lcd_char('#');
+			}
+		}
+		return 0;
+}
+
+void gentempnum()
+{
+	uart_trans(0xEF);
+	uart_trans(0x01);
+	uart_trans(0xFF);
+	uart_trans(0xFF);
+	uart_trans(0xFF);
+	uart_trans(0xFF);
+	uart_trans(0x01);
+	uart_trans(0x00);
+	uart_trans(0x03);
+	uart_trans(0x1D);
+	uart_trans(0x00);
+	uart_trans(0x21);
+	g =0;
+}
+
+void emptylib()
+{
+	uart_trans(0xEF);uart_trans(0x01);uart_trans(0xFF);uart_trans(0xFF);uart_trans(0xFF);uart_trans(0xFF);
+	uart_trans(0x01);uart_trans(0x00);uart_trans(0x03);uart_trans(0x0d);uart_trans(0x00);uart_trans(0x11);
+	_delay_ms(50);
+	g =0;
+}
+
+void genimg()
+{
+	uart_trans(0xEF);uart_trans(0x01);uart_trans(0xFF);uart_trans(0xFF);uart_trans(0xFF);uart_trans(0xFF);
+	uart_trans(0x01);uart_trans(0x00);uart_trans(0x03);uart_trans(0x01);uart_trans(0x00);uart_trans(0x05);
+	_delay_ms(50);
+
+}
+
+void genchar1()
+{
+	uart_trans(0xEF);uart_trans(0x01);uart_trans(0xFF);uart_trans(0xFF);uart_trans(0xFF);uart_trans(0xFF);
+	uart_trans(0x01);uart_trans(0x00);uart_trans(0x04);uart_trans(0x02);uart_trans(0x01);uart_trans(0x00);uart_trans(0x08);
+	 _delay_ms(50); 
+	 g=0;
+}
+
+void genchar2()
+{
+	uart_trans(0xEF);uart_trans(0x01);uart_trans(0xFF);uart_trans(0xFF);uart_trans(0xFF);uart_trans(0xFF);
+	uart_trans(0x01);uart_trans(0x00);uart_trans(0x04);uart_trans(0x02);uart_trans(0x02);uart_trans(0x00);uart_trans(0x09);
+	_delay_ms(50);
+	
+	g=0;
+}
+
+void gentemp()
+{
+	uart_trans(0xEF);uart_trans(0x01);uart_trans(0xFF);uart_trans(0xFF);uart_trans(0xFF);uart_trans(0xFF);
+	uart_trans(0x01);uart_trans(0x00);uart_trans(0x03);uart_trans(0x05);uart_trans(0x00);uart_trans(0x09);
+		_delay_ms(50);
+		
+		g=0;
+	 
+}
+
+
+
+void searchfing()
+{
+	uart_trans(0xEF);uart_trans(0x01);uart_trans(0xFF);uart_trans(0xFF);uart_trans(0xFF);uart_trans(0xFF);
+	uart_trans(0x01);uart_trans(0x00);uart_trans(0x08);uart_trans(0x04);uart_trans(0x01);uart_trans(0x00);uart_trans(0x00);uart_trans(0x00);uart_trans(0x0F);uart_trans(0x00);uart_trans(0x1d);
+	_delay_ms(50);
+	g=0;
+
+}
+
+void deletetemp()
+{
+	uart_trans(0xEF);uart_trans(0x01);uart_trans(0xFF);uart_trans(0xFF);uart_trans(0xFF);uart_trans(0xFF);
+	uart_trans(0x01);uart_trans(0x00);uart_trans(0x07);uart_trans(0x0c);uart_trans(0x00);uart_trans(0x03);uart_trans(0x00);uart_trans(0x01);uart_trans(0x00);;uart_trans(0x18);
+	_delay_ms(50);
+	
+	g=0;
+	
+	
+}
+
+
+
+void main()
+{
+	unsigned int one_time=0;
+	DDRA=0x00;
+	DDRD=0xF0;
+	DDRC=0xFF;
+	uartinit();
+	sei();
+	lcdinit();
+	
+	
+	
+
+	while(1)
+	{
+		genimg();
+		_delay_ms(1000);
+		if(val[11]==10)
+		{
+			if(val[9]=0);
+			{
+				while(1);
+			}
+		}
+	}
+			
+		
+	
+	
+}
+

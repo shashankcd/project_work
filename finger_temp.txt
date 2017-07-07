@@ -1,0 +1,186 @@
+pk=0;
+			it=0;
+			// Generate Character file of image
+			while(one_time==1)
+			{
+				cmd(0x01);
+				cmd(0x80);
+				string("char file start");
+				genchar1();
+				_delay_ms(500);
+				if(pk==1)
+				{
+					int match0=1;
+					for(int j=0; j<12; j++)
+					{
+					if(ack[j]!=genchar1_ack[j])	match0=0;
+						
+					}
+					if(match0==1)
+					{		
+						cmd(0x01);
+						cmd(0x80);
+						string("Char ok");
+						data((ack[9]/10)+48);
+						data((ack[9]%10)+48);
+						_delay_ms(1000);
+						one_time=0;
+						pk=0;
+					}
+					else
+					{
+						cmd(0x01);
+						cmd(0x80);
+						string("No char");
+						_delay_ms(500);
+						
+					}
+						
+				}
+			}
+			// generate char file 2 for char buff 2
+			while(one_time==0)
+			{
+				genimg();
+				_delay_ms(1000);
+				if(pk==1)
+				{
+					int match11=1;
+					for(int j=0; j<12; j++)
+					{
+					if(ack[j]!=genimg_ack[j])	match11=0;
+						
+					}
+					if(match11==1)
+					{		
+						cmd(0x01);
+						cmd(0x80);
+						string("Finger Collected");
+						one_time=1;
+						
+					}
+					else
+					{
+						cmd(0x01);
+						cmd(0x80);
+						string("No Finger");
+						
+					}
+				}
+			}
+			pk=0;
+			it=0;
+			// Generate Character file of image
+			while(one_time==1)
+			{
+				cmd(0x01);
+				cmd(0x80);
+				string("char2 file start");
+				genchar2();
+				_delay_ms(500);
+				if(pk==1)
+				{
+					int match02=1;
+					for(int j=0; j<12; j++)
+					{
+					if(ack[j]!=genchar2_ack[j])	match02=0;
+						
+					}
+					if(match02==1)
+					{		
+						cmd(0x01);
+						cmd(0x80);
+						string("Char2 ok");
+						data((ack[9]/10)+48);
+						data((ack[9]%10)+48);
+						_delay_ms(1000);
+						one_time=0;
+						pk=0;
+					}
+					else
+					{
+						cmd(0x01);
+						cmd(0x80);
+						string("No char");
+						_delay_ms(500);
+						
+					}
+						
+				}
+			}
+			
+			
+			//Generate template from character file
+			while(one_time==0)
+			{
+				cmd(0x01);
+				cmd(0x80);
+				string("Temp gen start");
+				gentemp();
+				_delay_ms(500);
+				if(pk==1)
+				{
+					int match1=1;
+					for(int j=0; j<12; j++)
+					{
+					if(ack[j]!=gentemp_ack[j])	match1=0;
+						
+					}
+					if(match1==1)
+					{		
+						cmd(0x01);
+						cmd(0x80);
+						string("temp ok");
+						_delay_ms(500);
+						one_time=1;
+						pk=0;
+					}
+					else
+					{
+						cmd(0x01);
+						cmd(0x80);
+						string("template error");
+						cmd(0xc0);
+						data((ack[9]/100)+48);
+						data((ack[9]/10)+48);
+						data((ack[9]%10)+48);
+						_delay_ms(500);
+						
+						
+					}
+						
+				}
+			}
+			
+			
+			
+			//Get image from module
+			while(one_time==0)
+			{
+				genimg();
+				_delay_ms(1000);
+				if(pk==1)
+				{
+					int match=1;
+					for(int j=0; j<12; j++)
+					{
+					if(ack[j]!=genimg_ack[j])	match=0;
+						
+					}
+					if(match==1)
+					{		
+						cmd(0x01);
+						cmd(0x80);
+						string("Finger Collected");
+						one_time=1;
+						
+					}
+					else
+					{
+						cmd(0x01);
+						cmd(0x80);
+						string("No Finger");
+						
+					}
+				}
+			}

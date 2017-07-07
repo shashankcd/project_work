@@ -1,0 +1,645 @@
+/*
+ * fingure_print.c
+ *
+ * Created: 14-Apr-14 6:02:59 PM
+ *  Author: user
+ */ 
+
+#include <avr/io.h>
+#define F_CPU 8000000UL
+#include <util/delay.h>
+#include <avr/interrupt.h>
+
+unsigned char temp,val[12]={0},g,addr,c,d;
+	unsigned int k;
+
+unsigned char Genimg[10]={0xEF,0X01,0xFF,0xFF,0xFF,0xFF,0x07,0x03,0X00,0X10};
+unsigned char Genchar[10]={0xEF,0X01,0xFF,0xFF,0xFF,0xFF,0x07,0x03,0X00,0X10};
+//unsigned char 
+
+void lcdinit()
+{
+	cmd(0x38);
+	cmd(0x0C);
+	cmd(0x06);
+	cmd(0x01);
+	cmd(0X80);
+	_delay_ms(100);
+	addr = 0;
+	c=0;
+	d=0;
+	
+}
+
+void cmd(unsigned char c)
+{
+	PORTC=c;
+	PORTA&=~(1<<PA7);
+	PORTA&=~(1<<PA6);
+	PORTA|=(1<<PA5);
+	_delay_us(40);
+	PORTA&=~(1<<PA5);
+}
+
+void data(unsigned	char c)
+{
+	if(c)
+	{
+		PORTC=c;
+	}
+	else PORTC=' ';		
+PORTA&=~(1<<PA6);
+PORTA|=(1<<PA7)|(1<<PA5);
+_delay_us(40);
+PORTA&=~(1<<PA5);
+cmd(0x06);
+
+}
+
+void string(char *p)
+{
+	while(*p) data(*p++);
+}
+
+void uart_init()
+{
+UBRRL = 0X10;
+UCSRA = (1<<U2X);
+UCSRB |= (1<<TXEN)|(1<<RXEN)|(1<<RXCIE);
+UCSRC = (1<<URSEL)|(1<<UCSZ1)|(1<<UCSZ0);
+sei();
+}	
+
+void uart_trans(unsigned char rec)
+{
+	while(!(UCSRA & (1<<UDRE)));
+_delay_ms(1);
+	UDR = rec;
+		_delay_ms(1);
+	
+}
+
+ISR(USART_RXC_vect)
+{
+	unsigned char t;
+//	UCSRA &= ~(1<<RXCIE);
+	 temp = UDR ;
+	 val[g]=temp;
+	// cmd(0x80);
+	
+	//temp = 0;
+	 data((temp/100)+48);
+	 t = temp % 100 ;
+	 data((t/10)+48);
+	 data((t % 10)+48) ;
+//_delay_us(120);
+	 g++;
+	
+	 
+}
+
+void gentempnum()
+{
+	uart_trans(0xEF);uart_trans(0x01);uart_trans(0xFF);uart_trans(0xFF);uart_trans(0xFF);uart_trans(0xFF);
+	uart_trans(0x01);uart_trans(0x00);uart_trans(0x03);uart_trans(0x1D);uart_trans(0x00);uart_trans(0x21);
+	_delay_ms(50);
+	g =0;
+}
+
+void emptylib()
+{
+	uart_trans(0xEF);uart_trans(0x01);uart_trans(0xFF);uart_trans(0xFF);uart_trans(0xFF);uart_trans(0xFF);
+	uart_trans(0x01);uart_trans(0x00);uart_trans(0x03);uart_trans(0x0d);uart_trans(0x00);uart_trans(0x11);
+	_delay_ms(50);
+	g =0;
+	addr =0;
+}
+
+void genimg()
+{
+	uart_trans(0xEF);uart_trans(0x01);uart_trans(0xFF);uart_trans(0xFF);uart_trans(0xFF);uart_trans(0xFF);
+	uart_trans(0x01);uart_trans(0x00);uart_trans(0x03);uart_trans(0x01);uart_trans(0x00);uart_trans(0x05);
+	_delay_ms(50);
+	g =0;
+}
+
+void genchar1()
+{
+	uart_trans(0xEF);uart_trans(0x01);uart_trans(0xFF);uart_trans(0xFF);uart_trans(0xFF);uart_trans(0xFF);
+	uart_trans(0x01);uart_trans(0x00);uart_trans(0x04);uart_trans(0x02);uart_trans(0x01);uart_trans(0x00);uart_trans(0x08);
+	 _delay_ms(50); 
+	 g=0;
+}
+
+void genchar2()
+{
+	uart_trans(0xEF);uart_trans(0x01);uart_trans(0xFF);uart_trans(0xFF);uart_trans(0xFF);uart_trans(0xFF);
+	uart_trans(0x01);uart_trans(0x00);uart_trans(0x04);uart_trans(0x02);uart_trans(0x02);uart_trans(0x00);uart_trans(0x09);
+	_delay_ms(50);
+	
+	g=0;
+}
+
+void gentemp()
+{
+	uart_trans(0xEF);uart_trans(0x01);uart_trans(0xFF);uart_trans(0xFF);uart_trans(0xFF);uart_trans(0xFF);
+	uart_trans(0x01);uart_trans(0x00);uart_trans(0x03);uart_trans(0x05);uart_trans(0x00);uart_trans(0x09);
+		_delay_ms(50);
+		
+		g=0;
+	 
+}
+
+void tempstore()
+{
+	addr++;
+	PORTA |= (1<<PA0);
+	cmd(0xda);
+	data(addr+48);
+	//data(' ');
+// 	data(d+48);
+// 	_delay_ms(2000);
+	c=(0x0E)+addr;
+	uart_trans(0xEF);uart_trans(0x01);uart_trans(0xFF);uart_trans(0xFF);uart_trans(0xFF);uart_trans(0xFF);
+	uart_trans(0x01);uart_trans(0x00);uart_trans(0x06);uart_trans(0x06);uart_trans(0x01);uart_trans(0x00);uart_trans(addr);uart_trans(0x00);uart_trans(c);
+	_delay_ms(50);
+	PORTA &= ~(1<<PA0);
+	
+	g=0;
+}
+
+void searchfing()
+{
+	uart_trans(0xEF);uart_trans(0x01);uart_trans(0xFF);uart_trans(0xFF);uart_trans(0xFF);uart_trans(0xFF);
+	uart_trans(0x01);uart_trans(0x00);uart_trans(0x08);uart_trans(0x04);uart_trans(0x01);uart_trans(0x00);uart_trans(0x00);uart_trans(0x00);uart_trans(0x0F);uart_trans(0x00);uart_trans(0x1d);
+	_delay_ms(50);
+	g=0;
+
+}
+
+void deletetemp()
+{
+	uart_trans(0xEF);uart_trans(0x01);uart_trans(0xFF);uart_trans(0xFF);uart_trans(0xFF);uart_trans(0xFF);
+	uart_trans(0x01);uart_trans(0x00);uart_trans(0x07);uart_trans(0x0c);uart_trans(0x00);uart_trans(0x03);uart_trans(0x00);uart_trans(0x01);uart_trans(0x00);;uart_trans(0x18);
+	_delay_ms(50);
+	
+	g=0;
+	
+	
+}
+
+
+int keyboard_read(void)
+{
+	int g;
+	
+	while(PINB != 0b00001111)
+	
+	{
+		
+		check1();
+		
+		if(k == 1 || g==50)
+		{
+			k=0;
+			return 0;
+
+		}
+// g++;
+// cmd(0x01);
+// cmd(0xd4);
+// data(g+48);
+// _delay_ms(500);
+		
+	}
+	
+
+	return 0;
+
+}
+
+int check1(void)
+{
+
+	
+	int i;
+	
+
+
+	PORTB=0b11111110;
+
+	if(k==0)
+	{
+
+		data(' ');
+		cmd(0x10);
+		k=1;
+
+	}
+
+
+	i= PINB;
+
+	_delay_ms(100);
+
+	if(i == 0xEE)
+	{
+		enroll();
+		_delay_ms(5);
+	}
+
+	if(i == 0b11011110)
+	{
+		k=0;
+		//scan();
+	//	k=1;
+		_delay_ms(5);
+	}
+
+	if(i == 0b10111110)
+	{
+		emptylib();
+		_delay_ms(1000);
+		emptylib();
+		_delay_ms(1000);
+		
+		char t;
+		
+		
+			 
+			// _delay_ms(5000);
+		//k=0;
+		gentempnum();
+		
+		_delay_ms(1000);
+		
+		addr = d;
+		
+		enroll();
+		_delay_ms(1000);
+		_delay_ms(5);
+	}
+
+	if(i == 0b01111110)
+	{
+		//k=0;
+		_delay_ms(5);
+	}
+
+// else
+// {
+// 	k=0;
+// }
+
+	return 0;
+
+}
+
+void enroll(int j)
+{
+	int i;
+	//addr++;
+	         cmd(0x01);
+			 _delay_ms(10);
+			 string("enroll no ");
+			
+			// data(j+49);
+			 _delay_ms(5000);
+			
+			 cmd(0x01);
+			 _delay_ms(10);
+ 			 genimg();
+			 _delay_ms(500);//_delay_ms(500);
+			cmd(0x01);
+				
+			if(strcmp(val,Genimg)==0)
+			{
+				cmd(0x01);
+				_delay_ms(10);
+				
+				string("finger collection successes");
+				_delay_ms(5000);
+			}
+			
+		for(i=0;i<12;i++)
+		{
+			val[i]=0;
+		}		
+		
+ 		cmd(0x01);
+		 _delay_ms(10);
+ 		genchar1();
+ 		_delay_ms(500);//_delay_ms(500);
+		cmd(0x01); 
+		 for(i=0;i<12;i++)
+		 {
+			 val[i]=0;
+		 }
+		 
+	
+		 
+		 cmd(0x01);
+		 genimg();
+		 _delay_ms(500);//_delay_ms(500);
+		 cmd(0x01);
+		 
+		 if(strcmp(val,Genimg)==0)
+		 {
+		 cmd(0x01);
+		 _delay_ms(50);
+		string("finger collection success");
+		_delay_ms(5000);
+		 }		
+		 
+		 for(i=0;i<12;i++)
+		 {
+			 val[i]=0;
+		 }
+		 
+		 cmd(0x01);
+		 _delay_ms(10);
+		 genchar2();
+		 _delay_ms(500);//_delay_ms(500);
+		 cmd(0x01);
+		 
+	//	  string("genchar2");
+		// _delay_ms(50);
+		  
+		 for(i=0;i<12;i++)
+		 {
+			 val[i]=0;
+		 }
+		 
+		
+ 		
+ 		cmd(0x01);
+		 _delay_ms(10);
+ 		gentemp();
+ 		_delay_ms(500);//_delay_ms(500);
+		 cmd(0x01);
+		 for(i=0;i<12;i++)
+		{
+			val[i]=0;
+		}	
+		
+		//cmd(0x01);
+		//_delay_ms(50);
+		tempstore();
+		_delay_ms(500);//_delay_ms(500);
+		cmd(0x01);
+		 string("tempstore");
+		 
+		//_delay_ms(50);
+		
+		for(i=0;i<10;i++)
+		{
+			val[i]=0;
+		}
+		
+		 cmd(0xD4);
+		 
+		 data(g+48);
+		 
+		 cmd(0x80);
+		 string("press 1 for");
+		 cmd(0xc0);
+		 string("new enrollment");
+		 
+		 cmd(0x94);
+		 string("press 2 for");
+		 
+		 cmd(0xd4);
+		 string("start scanning");
+		 _delay_ms(2000);
+		 
+		 DDRB=0x0f;
+
+		 PORTB=0xf0;
+
+		 while((PORTB&PINB)==0xf0);
+		 cmd(0x01);
+
+		 keyboard_read();
+}
+
+void scan()
+{
+	
+	int i;
+	cmd(0x01);
+			_delay_ms(10);
+		genimg();
+		_delay_ms(500);//_delay_ms(500);
+		cmd(0x01);
+		
+		if(strcmp(val,Genimg)==0)
+		{
+		string("finger collection success");
+			
+			//_delay_ms(500);
+			
+		
+		
+				
+		for(i=0;i<12;i++)
+		{
+			val[i]=0;
+		}
+		
+		cmd(0x01);
+		_delay_ms(10);
+		genchar1();
+	     _delay_ms(500);//_delay_ms(500);
+		cmd(0x01);
+		
+		for(i=0;i<12;i++)
+		{
+			val[i]=0;
+		}	
+		
+		cmd(0x01);
+		_delay_ms(10);
+		gentemp();
+		_delay_ms(500); //
+		cmd(0x01);
+		for(i=0;i<12;i++)
+		{
+			val[i]=0;
+		}
+		
+		
+		 cmd(0x01);
+		 _delay_ms(50);
+		 searchfing();
+		 _delay_ms(1000);
+		 cmd(0x01);
+		 string("searchfing");
+		 
+		// _delay_ms(100);
+		
+
+		 
+		  cmd(0x01);
+		  _delay_ms(50);
+		  char x=0,t;
+		  
+		  x = val[8];
+		cmd(0xD4);
+		data(x+48);
+		
+		   t = val[9];//10
+		   cmd(0xD6);
+		   data(t+48);
+		   
+		   cmd(0x94);
+		   
+		if(x==0)   
+		   {
+		   switch(t)
+		   {
+			  case 4:  string("shrutika patil");
+					   break;
+					  
+			  case 2: string("Nihal mulani");
+		              break;
+					  
+			  default: string("                 ");
+		   }
+		   }		  
+		  
+		  
+		
+		
+		  
+		  if(x==0)
+		  {
+			  cmd(0x80);
+			  string("found the matching");
+			  cmd(0xc0);
+			  string("finger");
+			  _delay_ms(5000);
+		  }
+		  
+		  else
+		  {
+			  cmd(0X80);
+			  string("No match found");
+			  _delay_ms(5000);
+		  }
+		  
+		   }
+		   
+		   else
+		   {
+			   _delay_ms(10);
+		   }  
+		  
+		  
+// 		  deletetemp();
+// 		  _delay_ms(1000);
+}
+
+int main(void)
+{
+	DDRA=0XFF;
+	DDRC=0XFF;
+	DDRB=0xF0;
+	//DDRD |= (1<<PD1);
+	int i,j;
+		lcdinit();
+		uart_init();
+		
+//  		emptylib();
+//  		_delay_ms(5000);
+
+//addr=0;
+		
+		cmd(0xD4);
+		gentempnum();
+		_delay_ms(500);//_delay_ms(50);
+		cmd(0x01);
+			
+ 		d=val[9];
+ 								
+ 		cmd(0x12);
+ 		data(d+48);
+ 								
+		_delay_ms(5000);
+
+		addr = d;
+		_delay_ms(10);
+		
+		 cmd(0x80);
+		 string("press 1 for");
+		 cmd(0xC0);
+		 string("new enrollment");
+		 
+		 cmd(0x94);
+		 string("press 2 for");
+		 
+		 cmd(0xd4);
+		 string("start scanning");
+		 _delay_ms(5000);
+		data(d+48);	
+		_delay_ms(5000);
+		DDRB=0x0f;
+
+		PORTB=0xf0;
+
+		while((PORTB&PINB)==0xf0);
+		//cmd(0x01);
+
+		keyboard_read();
+				
+// 		for(j=0;j<2;j++)
+// 		{
+// 			
+// 			enroll(j);
+// 		 
+// 		}	
+		
+			
+    while(1)
+    {
+			
+// 		_delay_ms(2000);
+// 		
+// 		int f=0;
+// 		DDRB=0x0f;
+// 
+// 		PORTB=0xf0;
+// 			
+// 		while((PORTB&PINB)==0xf0)
+		
+// 			f++;
+// 			
+// 			if(f==50)
+// 			{ PORTB = 0xFF ;}
+// // 				
+// // 				cmd(0xd6);
+// // 				data(f+48);
+// 				_delay_ms(50);
+// 			
+// 			}
+// 	
+// 		PORTA &= ~(1<<PA0);	
+// 		cmd(0x01);
+// if(f!=50)
+// {
+// 		keyboard_read();
+// }		
+			
+		  scan();
+// 		  data((x/100)+48);
+// 		  t = x % 100 ;
+// 		  data((t/10)+48);
+// 		  data((t % 10)+48) ;
+// 		  _delay_ms(5000);
+		  
+
+	
+        //TODO:: Please write your application code 
+    }
+}
+
+

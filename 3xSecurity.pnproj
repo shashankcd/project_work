@@ -1,0 +1,1 @@
+<Project name="3xSecurity"><File path="main.c"></File><File path="Makefile"></File><File path="fingerprint.h"></File><File path="lcd.h"></File><File path="touchscreen.h"></File></Project>
